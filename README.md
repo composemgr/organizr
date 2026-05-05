@@ -47,8 +47,8 @@ See `docker-compose.yaml` for complete list of configurable options.
 
 ## 📂 Volumes
 
-- `./rootfs/config/organizr` - Data storage
-- `./rootfs/data/organizr` - Data storage
+- `./volumes/config/organizr` - Data storage
+- `./volumes/data/organizr` - Data storage
 
 ## 🔍 Logging
 
