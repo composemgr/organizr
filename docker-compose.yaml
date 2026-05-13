@@ -16,6 +16,8 @@ services:
     logging: *default-logging
     networks:
       - organizr
+      - proxy
+      - cloudflare
     ports:
       - "172.17.0.1:8089:80"
     environment:
@@ -23,6 +25,8 @@ services:
       PUID: ${SERVICE_USER:-1000}
       PGID: ${SERVICE_GROUP:-1000}
       fpm: "false"
+      CONTAINER_NAME: organizr-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
     volumes:
       - ./volumes/config/organizr:/config
     healthcheck:
@@ -30,7 +34,27 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://organizr-app:80'
+      - 'cloudflare.hostname=organizr.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.organizr-app.entrypoints=http'
+      - 'traefik.http.routers.organizr-app-secure.tls=true'
+      - 'traefik.http.routers.organizr-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.organizr-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.organizr-app.middlewares=organizr-app-https-redirect'
+      - 'traefik.http.routers.organizr-app-secure.entrypoints=https'
+      - 'traefik.http.routers.organizr-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.organizr-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.organizr-app-secure.service=organizr-app'
+      - 'traefik.http.services.organizr-app.loadbalancer.server.port=80'
 
 networks:
   organizr:
     external: false
+  proxy:
+    external: true
+  cloudflare:
+    external: true
