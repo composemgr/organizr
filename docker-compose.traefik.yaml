@@ -1,0 +1,46 @@
+name: organizr
+x-logging: &default-logging
+  options:
+    max-size: '5m'
+    max-file: '1'
+  driver: json-file
+
+services:
+  server:
+    image: organizr/organizr:latest
+    container_name: organizr-server
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: ${BASE_HOST_NAME:-$HOSTNAME}
+    restart: always
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: organizr-server
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
+      PUID: ${SERVICE_USER:-1000}
+      PGID: ${SERVICE_GROUP:-1000}
+    volumes:
+      - './volumes/config/organizr:/config'
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=traefik'
+      - 'traefik.http.routers.organizr-server.entrypoints=http'
+      - 'traefik.http.routers.organizr-server.rule=Host(`${BASE_HOST_NAME:-$HOSTNAME}`)'
+      - 'traefik.http.routers.organizr-server.middlewares=organizr-server-https-redirect'
+      - 'traefik.http.middlewares.organizr-server-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.organizr-server-secure.entrypoints=https'
+      - 'traefik.http.routers.organizr-server-secure.rule=Host(`${BASE_HOST_NAME:-$HOSTNAME}`)'
+      - 'traefik.http.routers.organizr-server-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.organizr-server-secure.service=organizr-server'
+      - 'traefik.http.services.organizr-server.loadbalancer.server.port=80'
+    networks:
+      - organizr
+      - traefik
+
+networks:
+  organizr:
+    name: organizr
+    external: false
+  traefik:
+    external: true
